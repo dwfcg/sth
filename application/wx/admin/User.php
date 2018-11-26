@@ -18,14 +18,15 @@ class User  extends Admin
     public function index()
     {
         $map=$this->getMap();
+        dump($map);
         $user=WxUser::where($map)->select()->toArray();
 
         return  ZBuilder::make('table')
             ->setTableName('wx_user')
-            ->setSearch(['nickname' => '昵称','mobile'=>'手机号'], '', '', true) // 设置搜索框
+            ->setSearch(['openid' => 'openid','mobile'=>'手机号'], '', '', true) // 设置搜索框
             ->addColumns([
                 ['id','ID'],
-                ['nickname','昵称','text'],
+//                ['nickname','昵称','text'],
                 ['mobile','手机号','text'],
                 ['openid','openid','text'],
                 ['level','计费方式','status','',['小时', '月卡']],

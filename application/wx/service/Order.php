@@ -86,34 +86,59 @@ class Order
         $lock=new Lock();
 //        dump($lock->isOnline($lnumlist));
         if(!$lock->isOnline($lnumlist)){
-            throw new ParameterException([
+            $returnData=[
                 'msg'=>'锁网络出现问题，联系工作人员',
-                'errorCode'=>1004,
-            ]);
+                'code'=>'1004',
+            ];
+            return   Json::create($returnData);
+//            throw new ParameterException([
+//                'msg'=>'锁网络出现问题，联系工作人员',
+//                'errorCode'=>1004,
+//            ]);
         }
         $re=$lock->lockInfo($lnumlist);
         if(!$re){
-            throw new ParameterException([
+            $returnData=[
                 'msg'=>'服务器报错',
-                'errorCode'=>500
-            ]);
+                'code'=>'500',
+            ];
+            return   Json::create($returnData);
+//            throw new ParameterException([
+//                'msg'=>'服务器报错',
+//                'errorCode'=>500
+//            ]);
         }else{
-            if($re['state']==0){
-                throw new ParameterException([
-                    'msg'=>'有人使用中',
-                    'errorCode'=>1005
-                ]);
+            if($re['state']==0||$re['state']==2){
+                $returnData=[
+                    'msg'=>'有人使用中或锁损坏',
+                    'code'=>'1005',
+                ];
+                return   Json::create($returnData);
+//                throw new ParameterException([
+//                    'msg'=>'有人使用中',
+//                    'errorCode'=>1005
+//                ]);
             }elseif ($re['state']==8){
-                throw new ParameterException([
+                $returnData=[
                     'msg'=>'异常，请通知管理人员',
-                    'errorCode'=>1006
-                ]);
+                    'code'=>'1006',
+                ];
+                return   Json::create($returnData);
+//                throw new ParameterException([
+//                    'msg'=>'异常，请通知管理人员',
+//                    'errorCode'=>1006
+//                ]);
 
             }elseif ($re['state']==9){
-                throw new ParameterException([
+                $returnData=[
                     'msg'=>'未知原因',
-                    'errorCode'=>1007
-                ]);
+                    'code'=>'1007',
+                ];
+                return   Json::create($returnData);
+//                throw new ParameterException([
+//                    'msg'=>'未知原因',
+//                    'errorCode'=>1007
+//                ]);
             }elseif($re['state']==1){
                 $model=new WxLock();
                 $lockInfo=$model->where('lnumlist',$lnumlist)->find();
@@ -121,15 +146,25 @@ class Order
                     Db::name('wx_lock')->where('lnumlist',$lockInfo['lnumlist'])->update(['status'=>1]);
                     return  true;
                 }elseif($lockInfo['status']==1){
-                    throw new ParameterException([
+                    $returnData=[
                         'msg'=>'有人使用',
-                        'errorCode'=>1008
-                    ]);
+                        'code'=>'1008',
+                    ];
+                    return   Json::create($returnData);
+//                    throw new ParameterException([
+//                        'msg'=>'有人使用',
+//                        'errorCode'=>1008
+//                    ]);
                 }elseif($lockInfo['status']==2){
-                    throw new ParameterException([
+                    $returnData=[
                         'msg'=>'该锁已损坏，通知管理人员',
-                        'errorCode'=>1009
-                    ]);
+                        'code'=>'1009',
+                    ];
+                    return   Json::create($returnData);
+//                    throw new ParameterException([
+//                        'msg'=>'该锁已损坏，通知管理人员',
+//                        'errorCode'=>1009
+//                    ]);
                 }
             }
         }

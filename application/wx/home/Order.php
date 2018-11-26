@@ -59,7 +59,7 @@ class Order extends Index
         $orderService->checkOrder($data['order_no']);
         $pay=new Pay();
         //调用pay得到支付参数
-        $rel=$pay->index($data['order_no']);//有待调整
+        $rel=$pay->cashpay($data['order_no']);
         return  Json::create($rel);
 
     }
@@ -75,15 +75,15 @@ class Order extends Index
        $userData=WxUser::get($uid);
 //       dump($userData);die();
        if(!$userData->status){
-//           $returnData=[
-//               'msg'=>'该账号有问题，联系管理员',
-//               'code'=>'1010',
-//           ];
-//           return   Json::create($returnData);
-           throw new ParameterException([
+           $returnData=[
                'msg'=>'该账号有问题，联系管理员',
-               'errorCode'=>1010
-           ]);
+               'code'=>'1010',
+           ];
+           return   Json::create($returnData);
+//           throw new ParameterException([
+//               'msg'=>'该账号有问题，联系管理员',
+//               'errorCode'=>1010
+//           ]);
        }
        $re=WxOrder::where(['uid'=>$uid,'status'=>0])->find();
 
@@ -91,25 +91,25 @@ class Order extends Index
            if($re['lnumlist']==$data['lnumlist']){
                $lockpwd=WxLock::where('lnumlist',$data['lnumlist'])->find();
                $lockController->unlock($re['lnumlist'],$lockpwd->pwd);
-//               $returnData=[
-//                   'msg'=>'锁已开',
-//                   'code'=>'1011',
-//               ];
-//               return   Json::create($returnData);
-               throw new ParameterException([
+               $returnData=[
                    'msg'=>'锁已开',
-                   'errorCode'=>1011
-               ]);
+                   'code'=>'1011',
+               ];
+               return   Json::create($returnData);
+//               throw new ParameterException([
+//                   'msg'=>'锁已开',
+//                   'errorCode'=>1011
+//               ]);
            }else{
-//               $returnData=[
-//                   'msg'=>'存在未支付订单',
-//                   'code'=>'1012',
-//               ];
-//               return   Json::create($returnData);
-               throw new ParameterException([
+               $returnData=[
                    'msg'=>'存在未支付订单',
-                   'errorCode'=>1012
-               ]);
+                   'code'=>'1012',
+               ];
+               return   Json::create($returnData);
+//               throw new ParameterException([
+//                   'msg'=>'存在未支付订单',
+//                   'errorCode'=>1012
+//               ]);
            }
 
        }
@@ -156,8 +156,14 @@ class Order extends Index
 //       $validate->goCheck();
        $data=$validate->getDataByRule(input('post.'));
        $order_no=$data['order_no'];
-       $orderData=WxOrder::where('order_no',$order_no)->find();
+       $orderData=WxOrder::with('user')->where('order_no',$order_no)->find();
+//       dump($orderData->toArray());
        //调用支付
+       $pay=new Pay();
+       //调用pay得到支付参数
+       $rel=$pay->wxOrder($orderData->toArray());
+       return  Json::create($rel);
+
    }
 
 }

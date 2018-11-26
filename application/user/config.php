@@ -3,10 +3,10 @@
 return [
     'wxpay_config'=>array(
         // 小程序app_id
-        'app_id' => 'wxaa0458ae1b3f8f36',
+        'app_id' => 'wx4610885af53f6d69',
         // 小程序app_secret
-        'app_secret' => '05458b34c839c4ba4e01402fd7862a77',
-        'mch_id'=>'1493283802',
+        'app_secret' => '6fd15a3a419fbd2c252b4023c11b9900',
+        'mch_id'=>'1519468901',
         // 'key'=>'Mhjfdsklgmkls2549816515555572653',
         'key'=>'n0alu1cnrq8bdus6jcpnnhkig421suz6',
         // 微信使用code换取用户openid及session_key的url地址

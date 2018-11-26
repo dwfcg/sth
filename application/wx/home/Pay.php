@@ -8,6 +8,9 @@
 
 namespace app\wx\home;
 use app\wx\model\WxCash;
+use app\wx\model\WxLock;
+use app\wx\model\WxOrder;
+use think\response\Json;
 use Yansongda\Pay\Pay   as Paycontroller;
 use Yansongda\Pay\Log;
 
@@ -16,17 +19,16 @@ use app\index\controller\Index;
 class Pay   extends Index
 {
     protected $config = [
-//        'appid' => 'wx4610885af53f6d69', // APP APPID
-//        'app_id' => 'wxb3fxxxxxxxxxxx', // 公众号 APPID
+        'app_id' => 'wxab9df49d05550d41', // 公众号 APPID
         'miniapp_id' => 'wx4610885af53f6d69', // 小程序 APPID
-        'mch_id' => '1493283802',
-        'key' => '6fd15a3a419fbd2c252b4023c11b9900',
-        'notify_url' => 'https://chashi.youacloud.com/index.php/wx/pay/index',
+        'mch_id' => '1519468901',
+        'key' => 'e6d82af59ca1c47735bd61ed561d0ba4',
+        'notify_url' => '',
         'cert_client' => './cert/apiclient_cert.pem', // optional，退款等情况时用到
         'cert_key' => './cert/apiclient_key.pem',// optional，退款等情况时用到
         'log' => [ // optional
             'file' => './logs/wechat.log',
-            'level' => 'debug', // 建议生产环境等级调整为 info，开发环境为 debug
+            'level' => 'info', // 建议生产环境等级调整为 info，开发环境为 debug
             'type' => 'single', // optional, 可选 daily.
             'max_file' => 30, // optional, 当 type 为 daily 时有效，默认 30 天
         ],
@@ -36,31 +38,88 @@ class Pay   extends Index
             // 更多配置项请参考 [Guzzle](https://guzzle-cn.readthedocs.io/zh_CN/latest/request-options.html)
         ],
     ];
+
     //月卡或者押金的支付
-    public function index($order_no)
+    public function cashpay($order_no)
     {
-        $orderInfo=WxCash::where('order_no',$order_no)->select()->toArray();
+        $orderInfo=WxCash::with('user')->where('order_no',$order_no)->select()->toArray();
+//        dump($orderInfo);
+        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/cashnotify_url';
         $order = [
-        'out_trade_no' => time(),
-        'body' => 'subject-测试',
-        'total_fee' => '1',
-        'openid' => 'oGkfT5Pe-HoSZWrp2gi3q1f2XPFY',
+            'out_trade_no' =>$orderInfo[0]['order_no'],
+            'body' => '费用缴纳',
+            'total_fee' =>$orderInfo[0]['cash']*100,
+            'openid' => $orderInfo[0]['user']['openid'],
         ];
+        $pay = Paycontroller::wechat($this->config);
+        $result = $pay->miniapp($order);
 
-//        $result = $wechat->miniapp($order);
-        $pay = Paycontroller::wechat($this->config)->scan($order)->send();
-        dump($pay);
-
-        // $pay->appId
-        // $pay->timeStamp
-        // $pay->nonceStr
-        // $pay->package
-        // $pay->signType
+       return   $result->toArray();
     }
-    public function demo()
+
+    /**
+     * 月卡押金的回调
+     */
+    public function cashnotify_url()
     {
-        $time=time();
-        dump($this->time2string($time-1539755879));
+        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/cashnotify_url';
+        $wxpay =  Paycontroller::wechat($this->config);
+        Db::startTrans();
+        try{
+            $data = $wxpay->verify(); // 是的，验签就这么简单！
+            $out_trade_no = $data -> out_trade_no;
+            $data['trade_no']=  $data -> trade_no;
+            $data['status']=  1;
+            $orderCashModel=new WxCash();
+            $orderInfo=$orderCashModel->get(['order_no'=>$out_trade_no]);
+            if(!$orderInfo->status){
+                $orderCashModel->where(['order_no'=>$out_trade_no])->update($data);
+            }
+            Db::commit();
+        } catch (Exception $e) {
+            Db::rollback();
+        }
+        return $wxpay->success()->send();// laravel 框架中请直接 `return $pay->success()`
+    }
+
+    /**
+     * 订单的支付
+     */
+    public function wxOrder($orderInfo)
+    {
+        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/wxOrderNotifyUrl';
+        $order = [
+            'out_trade_no' =>$orderInfo['order_no'],
+            'body' => '费用缴纳',
+            'total_fee' =>$orderInfo['price']*100,
+            'openid' => $orderInfo['user']['openid'],
+        ];
+        $pay = Paycontroller::wechat($this->config);
+        $result = $pay->miniapp($order);
+
+        return   $result->toArray();
+    }
+    public function wxOrderNotifyUrl()
+    {
+        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/wxOrderNotifyUrl';
+        $wxpay =  Paycontroller::wechat($this->config);
+        Db::startTrans();
+        try{
+            $data = $wxpay->verify(); // 是的，验签就这么简单！
+            $out_trade_no = $data -> out_trade_no;
+            $data['trade_no']=  $data -> trade_no;
+            $data['status']=  1;
+            $orderOrderModel=new WxOrder();
+            $orderInfo=$orderOrderModel->get(['order_no'=>$out_trade_no]);
+            if(!$orderInfo->status){
+                $orderOrderModel->where(['order_no'=>$out_trade_no])->update($data);
+            }
+            WxLock::update(['status'=>0],['lnumlist'=>$orderInfo['lnumlist']]);
+            Db::commit();
+        } catch (Exception $e) {
+            Db::rollback();
+        }
+        return $wxpay->success()->send();// laravel 框架中请直接 `return $pay->success()`
     }
     public function time2string($second){
         $day = floor($second/(3600*24));

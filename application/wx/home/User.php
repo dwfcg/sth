@@ -49,10 +49,10 @@ class User  extends Home
     public function addcash()
     {
         $validata=new Cash();
-        $validata->goCheck();
+//        $validata->goCheck();
         $data=$validata->getDataByRule(input('post.'));
-        $uid=Token::getCurrentUid();
-//        $uid=1;
+//        $uid=Token::getCurrentUid();
+        $uid=4;
         $cashorder=new Order();
         $order_no=$cashorder->cashCreateOrder($data,$uid);
         return  Json::create(['order_no'=>$order_no]);
