@@ -53,8 +53,9 @@ class Order extends Index
     public function orderPay()
     {
         $orderValidate=new OrderValidate();
-        $orderValidate->goCheck();
+//        $orderValidate->goCheck();
         $data=$orderValidate->getDataByRule(input('post.'));
+//        dump($data);
         $orderService=new OrderService();
         $orderService->checkOrder($data['order_no']);
         $pay=new Pay();
@@ -69,9 +70,9 @@ class Order extends Index
        $lockController=new Lock();
        $validate=new OrderValidate();
 //       $validate->goCheck();
-//       $uid=Token::getCurrentUid();
+       $uid=Token::getCurrentUid();
        $data=$validate->getDataByRule(input('post.'));
-       $uid=1;
+//       $uid=5;
        $userData=WxUser::get($uid);
 //       dump($userData);die();
        if(!$userData->status){
@@ -119,6 +120,7 @@ class Order extends Index
        $lockController->updateLock($data['lnumlist']);
        $lockpwd=WxLock::where('lnumlist',$data['lnumlist'])->find();
        $lockController->unlock($data['lnumlist'],$lockpwd->pwd);
+       //TODO:推送  断电
 
 //       dump($re);
        $data=[

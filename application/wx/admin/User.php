@@ -18,7 +18,7 @@ class User  extends Admin
     public function index()
     {
         $map=$this->getMap();
-        dump($map);
+//        dump($map);
         $user=WxUser::where($map)->select()->toArray();
 
         return  ZBuilder::make('table')

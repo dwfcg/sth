@@ -8,8 +8,10 @@
 
 namespace app\wx\home;
 use app\wx\model\WxCash;
+use app\wx\model\WxConfig;
 use app\wx\model\WxLock;
 use app\wx\model\WxOrder;
+use think\Db;
 use think\response\Json;
 use Yansongda\Pay\Pay   as Paycontroller;
 use Yansongda\Pay\Log;
@@ -74,6 +76,20 @@ class Pay   extends Index
             $orderInfo=$orderCashModel->get(['order_no'=>$out_trade_no]);
             if(!$orderInfo->status){
                 $orderCashModel->where(['order_no'=>$out_trade_no])->update($data);
+                if($orderInfo->order_type){
+                    $config=new WxConfig();
+                    $configData=$config->find('1');
+                    $update=[
+                        'level'=>1,
+                        'start_time'=>time(),
+                        'time'=>$configData->time,
+                        'card_end_time'=>strtotime('+'.'30'.'days'),
+                    ];
+                    Db::name('user')->where(['id'=>$orderInfo->uid])->update($update);
+                }else{
+                    Db::name('user')->where(['id'=>$orderInfo->uid])->update(['level'=>0]);
+                }
+
             }
             Db::commit();
         } catch (Exception $e) {
@@ -116,6 +132,7 @@ class Pay   extends Index
             }
             WxLock::update(['status'=>0],['lnumlist'=>$orderInfo['lnumlist']]);
             Db::commit();
+            //TODO:推送 断电
         } catch (Exception $e) {
             Db::rollback();
         }
@@ -130,6 +147,24 @@ class Pay   extends Index
         $second = $second%60;//除去整分钟之后剩余的时间
 //返回字符串
         return $day.'天'.$hour.'小时'.$minute.'分'.$second.'秒';
+    }
+    public function refund(){
+
+        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/refundNotifyUrl';
+        $wxpay =  Paycontroller::wechat($this->config);
+        $order_no=input('order_no');
+        $cashModel=new WxCash();
+        $cashOrder=$cashModel->get(['order_no'=>$order_no]);
+        //TODO:退款
+//        $order = [
+//            'out_trade_no' => $cashOrder->trade_no,
+//            'out_refund_no' => time(),
+//            'total_fee' =>$cashOrder->cash*100,
+//            'refund_fee' => '1',
+//            'refund_desc' => '测试退款haha',
+//        ];
+
+//        $result = $wxpay->refund($order);
     }
 
 //    public function notify()

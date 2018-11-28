@@ -25,7 +25,7 @@ class Order extends Admin
             ->join('wx_user  ','wx_user.id=w.uid')
             ->where($map)
             ->order('w.create_time desc')
-            ->field('w.id,w.order_no,mobile,openid,w.status,w.pay_type,price,w.time,w.create_time,w.end_time,lnumlist')
+            ->field('w.id,w.order_no,mobile,openid,w.status,w.pay_type,price,w.time,w.create_time,w.end_time,lnumlist,wx_user.id as uid')
             ->select()->toArray();
 //        dump($order);
         return  ZBuilder::make('table')
@@ -34,6 +34,7 @@ class Order extends Admin
             ->addColumns([
                 ['id','ID'],
                 ['order_no','订单编号','text'],
+                ['uid','用户ID','text'],
                 ['mobile','手机号','text'],
                 ['openid','openid','text'],
                 ['status','计费方式','status','',['待付款', '已付款']],

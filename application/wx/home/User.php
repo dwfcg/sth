@@ -51,8 +51,8 @@ class User  extends Home
         $validata=new Cash();
 //        $validata->goCheck();
         $data=$validata->getDataByRule(input('post.'));
-//        $uid=Token::getCurrentUid();
-        $uid=4;
+        $uid=Token::getCurrentUid();
+//        $uid=4;
         $cashorder=new Order();
         $order_no=$cashorder->cashCreateOrder($data,$uid);
         return  Json::create(['order_no'=>$order_no]);
@@ -63,8 +63,12 @@ class User  extends Home
         $validate=new UserValidate();
 //        $validate->goCheck();
         $uid=Token::getCurrentUid();
-//        $uid=1;
+//        $uid=4;
         $data=WxUser::getByID($uid);
+        $data=$data->toArray();
+        foreach ($data['order'] as &$v){
+            $v['create_time']=date('Y-m-d h:i:s',$v['create_time']);
+        }
         return Json::create($data);
 
     }
@@ -74,7 +78,7 @@ class User  extends Home
         $validate=new UserValidate();
 //        $validate->goCheck();
         $uid=Token::getCurrentUid();
-//        $uid=1;
+//        $uid=4;
         $data=$validate->getDataByRule(input('post.'));
         $cashModel=new WxCash();
         if($data['order_type']==1){

@@ -26,6 +26,10 @@ class WxUser    extends Model
     {
         return $this->hasMany('WxCash','uid','id');
     }
+    public function order()
+    {
+        return $this->hasMany('WxOrder','uid','id');
+    }
     public static function getByOpenID($openid)
     {
         $user = self::where('openid', $openid)
@@ -34,7 +38,17 @@ class WxUser    extends Model
     }
     public static function getByID($uid)
     {
-        $user = self::with('cash')->where('id', $uid)
+        $user = self::with([
+            'cash'=>function($q){
+                $q->where([
+                    'status'=>1,
+                    'order_type'=>0,
+
+                ]);
+            }
+        ])
+            ->with('order')
+            ->where('id', $uid)
             ->find();
         return $user;
     }

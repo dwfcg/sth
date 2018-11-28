@@ -117,6 +117,7 @@ class Lock  extends Admin
             'page'=>'page/index/index',
         ];
         $data=json_decode(curl_post($url,$array),true);
+        dump($data);
        if(array_key_exists('errcode',$data)){
             $this->error('二维码转换失败');
        }
