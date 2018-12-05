@@ -35,9 +35,26 @@ class User  extends Home
                 'msg'=>$rel
             ]);
         }
-        $uid=Token::getCurrentUid();
-        $data=WxUser::update($data,['id'=>$uid]);
-        return Json::create(['code'=>1]);
+        if(Sms::checkCode()){
+//            echo 11;
+            $uid=Token::getCurrentUid();
+//            $uid=4;
+            $user=WxUser::get(['id'=>$uid]);
+            $config=WxConfig::get(['id',1]);
+            if($user['update_time']+$config->date*24*3600>time()){
+                throw new ParameterException([
+                    'msg'=>'更换频率过高'
+                ]);
+            }
+            $data=WxUser::update($data,['id'=>$uid]);
+            return Json::create(['code'=>1]);
+        }else{
+            $returnData=[
+                'msg'=>'code填写不正确',
+                'code'=>'1023',
+            ];
+            return   Json::create($returnData);
+        }
 
     }
     public function getConfig()
@@ -88,6 +105,7 @@ class User  extends Home
         }
         return Json::create($data);
     }
+
 
 
 }

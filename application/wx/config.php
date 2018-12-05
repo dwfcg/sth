@@ -2,6 +2,7 @@
 //配置文件
 return [
     'wxpay_config'=>array(
+        'code_time_out'=>60,
         // 小程序app_id
         'app_id' => 'wxaa0458ae1b3f8f36',
         // 小程序app_secret

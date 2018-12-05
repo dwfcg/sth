@@ -7,12 +7,14 @@
  */
 
 namespace app\wx\home;
+use app\lib\exception\ParameterException;
 use app\wx\model\WxCash;
 use app\wx\model\WxConfig;
 use app\wx\model\WxLock;
 use app\wx\model\WxOrder;
 use think\Db;
 use think\response\Json;
+use Yansongda\Pay\Gateways\Wechat\Support;
 use Yansongda\Pay\Pay   as Paycontroller;
 use Yansongda\Pay\Log;
 
@@ -26,8 +28,8 @@ class Pay   extends Index
         'mch_id' => '1519468901',
         'key' => 'e6d82af59ca1c47735bd61ed561d0ba4',
         'notify_url' => '',
-        'cert_client' => './cert/apiclient_cert.pem', // optional，退款等情况时用到
-        'cert_key' => './cert/apiclient_key.pem',// optional，退款等情况时用到
+        'cert_client' => '', // optional，退款等情况时用到
+        'cert_key' => '',// optional，退款等情况时用到
         'log' => [ // optional
             'file' => './logs/wechat.log',
             'level' => 'info', // 建议生产环境等级调整为 info，开发环境为 debug
@@ -47,6 +49,7 @@ class Pay   extends Index
         $orderInfo=WxCash::with('user')->where('order_no',$order_no)->select()->toArray();
 //        dump($orderInfo);
         $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/cashnotify_url';
+//        dump($this->config);die();
         $order = [
             'out_trade_no' =>$orderInfo[0]['order_no'],
             'body' => '费用缴纳',
@@ -66,35 +69,41 @@ class Pay   extends Index
     {
         $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/cashnotify_url';
         $wxpay =  Paycontroller::wechat($this->config);
-        Db::startTrans();
-        try{
-            $data = $wxpay->verify(); // 是的，验签就这么简单！
-            $out_trade_no = $data -> out_trade_no;
-            $data['trade_no']=  $data -> trade_no;
+            $obj = $wxpay->verify(); // 是的，验签就这么简单！
+            $out_trade_no = $obj->out_trade_no;
+            $data['trade_no']=  $obj -> trade_no;
             $data['status']=  1;
             $orderCashModel=new WxCash();
             $orderInfo=$orderCashModel->get(['order_no'=>$out_trade_no]);
-            if(!$orderInfo->status){
+            if($orderInfo->status==0){
+//                echo 22;
                 $orderCashModel->where(['order_no'=>$out_trade_no])->update($data);
                 if($orderInfo->order_type){
+//                    echo 11;
                     $config=new WxConfig();
                     $configData=$config->find('1');
+                    //判断是否月卡时间清零
+                    $user=Db::name('wx_user')->find($orderInfo->uid);
+                    if($user['card_end_time']<time()){
+                        $time=$user['time']+$configData->time;
+                    }else{
+                        $time=$configData->time;
+                    }
+
                     $update=[
                         'level'=>1,
+                        'trade_no'=>$data['trade_no'],
                         'start_time'=>time(),
-                        'time'=>$configData->time,
+                        'time'=>$time,
                         'card_end_time'=>strtotime('+'.'30'.'days'),
                     ];
-                    Db::name('user')->where(['id'=>$orderInfo->uid])->update($update);
+                    Db::name('wx_user')->where(['id'=>$orderInfo->uid])->update($update);
                 }else{
-                    Db::name('user')->where(['id'=>$orderInfo->uid])->update(['level'=>0]);
+//                    echo 33;
+                    Db::name('wx_user')->where(['id'=>$orderInfo->uid])->update(['level'=>0]);
                 }
 
             }
-            Db::commit();
-        } catch (Exception $e) {
-            Db::rollback();
-        }
         return $wxpay->success()->send();// laravel 框架中请直接 `return $pay->success()`
     }
 
@@ -121,9 +130,9 @@ class Pay   extends Index
         $wxpay =  Paycontroller::wechat($this->config);
         Db::startTrans();
         try{
-            $data = $wxpay->verify(); // 是的，验签就这么简单！
-            $out_trade_no = $data -> out_trade_no;
-            $data['trade_no']=  $data -> trade_no;
+            $obj = $wxpay->verify(); // 是的，验签就这么简单！
+            $out_trade_no = $obj -> out_trade_no;
+            $data['trade_no']=  $obj -> trade_no;
             $data['status']=  1;
             $orderOrderModel=new WxOrder();
             $orderInfo=$orderOrderModel->get(['order_no'=>$out_trade_no]);
@@ -148,37 +157,64 @@ class Pay   extends Index
 //返回字符串
         return $day.'天'.$hour.'小时'.$minute.'分'.$second.'秒';
     }
-    public function refund(){
-
-        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/refundNotifyUrl';
+    public function refund()
+    {
+        $this->config['cert_client']= EXTEND_PATH.'cert/apiclient_cert.pem';
+        $this->config['cert_key']= EXTEND_PATH.'cert/apiclient_key.pem';
+//        $this->config['notify_url']='https://chashi.youacloud.com/index.php/wx/pay/refundNotifyUrl';
         $wxpay =  Paycontroller::wechat($this->config);
         $order_no=input('order_no');
         $cashModel=new WxCash();
         $cashOrder=$cashModel->get(['order_no'=>$order_no]);
-        //TODO:退款
-//        $order = [
-//            'out_trade_no' => $cashOrder->trade_no,
-//            'out_refund_no' => time(),
-//            'total_fee' =>$cashOrder->cash*100,
-//            'refund_fee' => '1',
-//            'refund_desc' => '测试退款haha',
-//        ];
 
-//        $result = $wxpay->refund($order);
+        $order = [
+//            BB29660998765071
+            'out_trade_no' => $cashOrder->order_no,
+            'out_refund_no' => time(),
+            'total_fee' =>($cashOrder->cash)*100,
+            'refund_fee' => ($cashOrder->cash)*100,
+            'refund_desc' => '押金退款',
+        ];
+//        BB29787040782061
+//        $result = $wxpay->refund($order)->toArray();
+        if($cashOrder->order_type==0){
+            $result = $wxpay->refund($order)->toArray();
+            if($result['return_code']=='SUCCESS'){
+//                dump($cashOrder->uid);
+                Db::name('wx_user')->where(['id'=>$cashOrder->uid])->update(['level'=>2]);
+                $cashModel->where('order_no',$result['out_trade_no'])->delete();
+                $returnData=[
+                    'msg'=>'退款成功',
+                    'code'=>'1050',
+                ];
+                return   Json::create($returnData);
+            }
+        }else{
+            throw new ParameterException([
+                'msg'=>'不支持退款'
+            ]);
+        }
+
+
     }
+    public function refundNotifyUrl()
+    {
+        $pay = Pay::wechat($this->config);
 
-//    public function notify()
-//    {
-//        $pay = Pay::wechat($this->config);
-//
-//        try{
-//            $data = $pay->verify(); // 是的，验签就这么简单！
-//
-//            Log::debug('Wechat notify', $data->all());
-//        } catch (Exception $e) {
-//            // $e->getMessage();
-//        }
-//
-//        return $pay->success()->send();// laravel 框架中请直接 `return $pay->success()`
-//    }
+        try{
+            $data = $pay->verify(); // 是的，验签就这么简单！
+
+            Log::debug('Wechat notify', $data->all());
+        } catch (Exception $e) {
+            // $e->getMessage();
+        }
+
+        return $pay->success()->send();// laravel 框架中请直接 `return $pay->success()`
+    }
+    public function demo()
+    {
+//        echo dirname(ROOT_PATH.);
+        $this->config['cert_client']= EXTEND_PATH.'cert/apiclient_cert.pem' ;
+        $this->config['cert_key']= EXTEND_PATH.'cert/apiclient_key.pem' ;
+    }
 }

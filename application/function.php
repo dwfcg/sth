@@ -55,6 +55,25 @@ function curl_post($url, array $params = array())
     curl_close($ch);
     return ($data);
 }
+function https_request($url,$data,$type='json'){
+    if($type=='json'){//json $_POST=json_decode(file_get_contents('php://input'), TRUE);
+        $headers = array("Content-type: application/json;charset=UTF-8","Accept: application/x-www-form-urlencoded","Cache-Control: no-cache", "Pragma: no-cache");
+        $data=json_encode($data);
+    }
+    $curl = curl_init();
+    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, FALSE);
+    if (!empty($data)){
+        curl_setopt($curl, CURLOPT_POST, 1);
+        curl_setopt($curl, CURLOPT_POSTFIELDS,$data);
+    }
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt( $curl, CURLOPT_HTTPHEADER, $headers );
+    $output = curl_exec($curl);
+    curl_close($curl);
+    return $output;
+}
 function getRandChar($length)
 {
     $str = null;

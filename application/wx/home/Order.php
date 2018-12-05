@@ -167,5 +167,21 @@ class Order extends Index
        return  Json::create($rel);
 
    }
+//   获取订单信息
+   public function getOrderInfo()
+   {
+       $data=input('post.');
+//       dump($data['order_no']);
+       $orderInfo=WxOrder::get(['order_no'=>$data['order_no']]);
+//       dump($orderInfo);
+       return  Json::create($orderInfo);
+   }
+   public function getUserOrder()
+   {
+       $uid=Token::getCurrentUid();
+//       $uid=22;
+       $data=WxOrder::all(['uid'=>$uid]);
+       return  Json::create($data);
+   }
 
 }

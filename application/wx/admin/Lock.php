@@ -11,6 +11,7 @@ namespace app\wx\admin;
 
 use app\admin\controller\Admin;
 use app\common\builder\ZBuilder;
+use app\wx\home\ImageUpload;
 use app\wx\home\Wxtoken;
 use app\wx\model\WxCabin;
 use app\wx\model\WxLock;
@@ -21,7 +22,7 @@ class Lock  extends Admin
     public function index()
     {
         $map=$this->getMap();
-        $cabin=WxLock::where($map)->select()->toArray();
+        $cabin=WxLock::where($map)->paginate();
 
         return  ZBuilder::make('table')
             ->setTableName('wx_lock')
@@ -37,7 +38,7 @@ class Lock  extends Admin
             ])
             ->addTopButtons(['add','delete'])
             ->addRightButtons(['edit','delete'])
-            ->addRightButton('custom',['href' => url('access', ['lnumlist' => '__lnumlist__'])]) // 添加授权按钮
+            ->addRightButton('custom',['href' => url('access', ['lnumlist' => '__lnumlist__']),'title'=>' 下载二维码']) // 添加授权按钮
             ->setRowList($cabin)
             ->fetch();
     }
@@ -68,6 +69,7 @@ class Lock  extends Admin
                 ['hidden','id'],
                 ['text', 'lnumlist', '编号'],
                 ['text', 'cnumlist', '舱体ID'],
+//                ['ueditor','content','商品内容','<span class="text-danger">请直接上传图片就行,不要对图片进行过多操作</span>'],
             ])
             ->fetch();
     }
@@ -106,21 +108,62 @@ class Lock  extends Admin
     }
     public function access()
     {
-        $lnumlist=input('lnumlist');
-       $wxtokenController=new Wxtoken();
-       $wxtoken=$wxtokenController->refreshWxToken();
-//       dump($wxtoken);
-//        POST https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=ACCESS_TOKEN
-        $url= 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token='.$wxtoken.'';
-        $array=[
-            'scene'=>$lnumlist,
-            'page'=>'page/index/index',
+        $lnumlist = input('lnumlist');
+        $wxtokenController = new Wxtoken();
+        $wxtoken = $wxtokenController->refreshWxToken();
+//        dump($wxtoken);
+////        POST https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=ACCESS_TOKEN
+        $url = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=' . $wxtoken;
+        $array = [
+            'scene' => $lnumlist,
+//            'page'=>"pages/index/index"
         ];
-        $data=json_decode(curl_post($url,$array),true);
-        dump($data);
-       if(array_key_exists('errcode',$data)){
-            $this->error('二维码转换失败');
-       }
-
+        $param = json_encode(array("scene"=>$lnumlist,"page"=>"pages/index/index","width"=> 150));
+        $result = $this->httpRequest( $url, $param,"POST");
+        $ret = file_put_contents($lnumlist.'.png', $result, true);
+        $fileName = $lnumlist.'.png'; //得到文件名
+        header( "Content-Disposition:  attachment;  filename=".$fileName); //告诉浏览器通过附件形式来处理文件
+        header('Content-Length: ' . filesize($fileName)); //下载文件大小
+        readfile($fileName);  //读取文件内容
     }
+    //把请求发送到微信服务器换取二维码
+    function httpRequest($url, $data='', $method='GET'){
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($curl, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($curl, CURLOPT_AUTOREFERER, 1);
+        if($method=='POST')
+        {
+            curl_setopt($curl, CURLOPT_POST, 1);
+            if ($data != '')
+            {
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+            }
+        }
+
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        curl_setopt($curl, CURLOPT_HEADER, 0);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        $result = curl_exec($curl);
+        curl_close($curl);
+        return $result;
+    }
+
+    public  function binary_to_file($file){
+        $content = $GLOBALS['HTTP_RAW_POST_DATA'];  // 需要php.ini设置
+        if(empty($content)){
+            $content = file_get_contents('php://input');    // 不需要php.ini设置，内存压力小
+        }
+        $ret = file_put_contents($file, $content, true);
+        return $ret;
+    }
+
+    // demo
+
+
+
+
 }

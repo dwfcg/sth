@@ -130,17 +130,7 @@ class Order
                     'errorCode'=>1006
                 ]);
 
-            }elseif ($re['state']==9){
-//                $returnData=[
-//                    'msg'=>'未知原因',
-//                    'code'=>'1007',
-//                ];
-//                return   Json::create($returnData);
-                throw new ParameterException([
-                    'msg'=>'未知原因',
-                    'errorCode'=>1007
-                ]);
-            }elseif($re['state']==1){
+            }elseif($re['state']==1||$re['state']==9){
                 $model=new WxLock();
                 $lockInfo=$model->where('lnumlist',$lnumlist)->find();
                 if($lockInfo['status']==0){

@@ -176,7 +176,6 @@ class Wechat implements GatewayApplicationInterface
             $decrypt_data = Support::decryptRefundContents($data['req_info']);
             $data = array_merge(Support::fromXml($decrypt_data), $data);
         }
-
         Log::debug('Resolved The Received Wechat Request Data', $data);
 
         if ($refund || Support::generateSign($data) === $data['sign']) {

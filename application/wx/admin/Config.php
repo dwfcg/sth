@@ -26,6 +26,7 @@ class Config extends Admin
                 ['hour', '小时金额', 'text.edit'],
                 ['cash', '押金', 'text.edit'],
                 ['time', '月卡小时数', 'text.edit'],
+                ['date', '更换手机号:天', 'text.edit'],
             ])
             ->setRowList($cabin)
             ->fetch();

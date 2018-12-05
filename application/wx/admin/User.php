@@ -19,7 +19,7 @@ class User  extends Admin
     {
         $map=$this->getMap();
 //        dump($map);
-        $user=WxUser::where($map)->select()->toArray();
+        $user=WxUser::where($map)->paginate();
 
         return  ZBuilder::make('table')
             ->setTableName('wx_user')
@@ -30,7 +30,7 @@ class User  extends Admin
                 ['mobile','手机号','text'],
                 ['openid','openid','text'],
                 ['level','计费方式','status','',['小时', '月卡']],
-                ['status','状态','status','',['逃单', '正常']],
+                ['status','状态','switch','',['逃单', '正常']],
                 ['create_time','创建时间','datetime','','Y/m/d H:i:s'],
                 ['right_button', '操作', 'btn']
             ])

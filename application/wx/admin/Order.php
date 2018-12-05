@@ -26,7 +26,7 @@ class Order extends Admin
             ->where($map)
             ->order('w.create_time desc')
             ->field('w.id,w.order_no,mobile,openid,w.status,w.pay_type,price,w.time,w.create_time,w.end_time,lnumlist,wx_user.id as uid')
-            ->select()->toArray();
+            ->paginate();
 //        dump($order);
         return  ZBuilder::make('table')
             ->setTableName('wx_order')

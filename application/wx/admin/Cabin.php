@@ -18,7 +18,7 @@ class Cabin     extends Admin
     public function index()
     {
         $map=$this->getMap();
-        $cabin=WxCabin::where($map)->select()->toArray();
+        $cabin=WxCabin::where($map)->paginate();
         return  ZBuilder::make('table')
             ->setTableName('wx_cabin')
             ->setSearch(['name' => '昵称','cnumlist'=>'编号'], '', '', true) // 设置搜索框
