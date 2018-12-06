@@ -55,8 +55,8 @@ class Sms   extends Home
         }
         $code=Cache::get($data['code']);
         if($code!=$data['code']){
-            echo 22;
-//            return   false;
+//            echo 22;
+            return   false;
         }else{
 //            echo 11;
            return   true;
