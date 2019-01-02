@@ -9,7 +9,7 @@
 namespace app\wx\admin;
 
 
-class demo
+class demo  extends aaa
 {
 
 }

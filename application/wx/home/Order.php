@@ -145,6 +145,11 @@ class Order extends Index
        $data=$validate->getDataByRule(input('post.'));
        $order_no=$data['order_no'];
        $orderData=WxOrder::where('order_no',$order_no)->find();
+       if($orderData['status']==1){
+           throw new ParameterException([
+               'msg'=>'该订单已经支付完成'
+           ]);
+       }
        $orderService=new OrderService();
        $updateData=$orderService->endOrder($orderData);
        $rel=WxOrder::update($updateData,['order_no'=>$order_no]);

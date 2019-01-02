@@ -62,21 +62,31 @@ class Order
         $userModel = new WxUser();
         $userData = $userModel->find($orderData['uid']);
         if ($userData['level'] == 0) {
+//            echo  11;
             $update['pay_type'] = 0;
             $update['price'] = $update['time'] * $configData['hour'];
         } elseif ($userData['level'] == 1) {
             if ($userData['card_end_time'] > time()) {
+//                echo  22;
                 if ($userData['time'] > $update['time']) {
                     $update['pay_type'] = 1;
                     $update['price'] = 0;
                 } else {
+//                    echo  3;
                     $update['pay_type'] = 2;
                     $update['price'] = ($update['time'] - $userData['time'])*$configData['hour'];
                 }
             }else{
+//                echo  4;
                 $update['pay_type'] = 0;
                 $update['price'] = $update['time'] * $configData['hour'];
             }
+        }else
+        {
+//            echo  5;
+            throw new ParameterException([
+                'msg'=>'账户存在问题'
+            ]);
         }
         return $update;
 
